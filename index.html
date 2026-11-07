@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- ป้องกันแคช -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  
+  <title>ระบบสแกนเข้างาน</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  
+  <style>
+    body { font-family: 'Kanit', sans-serif; text-align: center; padding: 20px; background-color: #f4f6f9; }
+    h2 { color: #333; }
+    .box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    
+    /* รูปแบบปุ่มวงกลมสีเขียว (จัดกึ่งกลางด้วย Flexbox) */
+    .btn-in-circle { 
+      width: 240px; 
+      height: 240px; 
+      background-color: #28a745; /* เปลี่ยนเป็นสีเขียว */
+      border-radius: 50%; 
+      border: none; 
+      color: white; 
+      font-size: 32px; 
+      font-weight: bold; 
+      cursor: pointer; 
+      margin: 30px auto; 
+      box-shadow: 0 8px 20px rgba(40, 167, 69, 0.5); /* เปลี่ยนเงาเป็นโทนสีเขียว */
+      
+      /* ซ่อนไว้ก่อน จะแสดงเป็น flex เมื่ออยู่ในพื้นที่ */
+      display: none; 
+      justify-content: center;
+      align-items: center;
+      padding: 0;
+    }
+    
+    #status { font-size: 16px; margin: 15px 0; }
+    .loading { color: #f39c12; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>ระบบสแกนเข้างาน</h2>
+  
+  <div class="box">
+    <div id="profile-info" style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">กำลังโหลดข้อมูล...</div>
+    <div id="status" class="loading">กำลังเตรียมความพร้อม...</div>
+    
+    <!-- ปุ่มสแกนเข้า -->
+    <button id="btn-in" class="btn-in-circle" onclick="recordTime('สแกนเข้า')">สแกนเข้างาน</button>
+  </div>
+
+  <script>
+    // ⚙️ 1. ใส่ค่าของคุณตรงนี้ให้ถูกต้อง
+    const LIFF_ID = "2012358032-O25dyx4P"; 
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzM9UpxEvIkHO928aBH2LES7ZocbV5RKL3fLD9u_GxcIzrg5RGLvjwoVM0VJfQuE1GgJQ/exec"; 
+
+    // ตัวแปรเก็บพิกัด
+    let OFFICE_LAT = 0, OFFICE_LNG = 0, MAX_DISTANCE = 0;
+    let userProfile = null, currentLat = null, currentLng = null, currentDist = null;
+
+    // 🚀 2. เริ่มต้น LIFF
+    async function main() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) { liff.login(); return; }
+        
+        userProfile = await liff.getProfile();
+        document.getElementById("profile-info").innerText = "👤 สวัสดีคุณ: " + userProfile.displayName;
+        loadSettings();
+      } catch (err) {
+        document.getElementById("status").innerHTML = `<span style="color: red;">Error LIFF: ${err}</span>`;
+      }
+    }
+
+    // 📍 3. โหลดค่าพิกัดออฟฟิศจาก Google Sheet
+    async function loadSettings() {
+      document.getElementById("status").innerHTML = `<span class="loading">กำลังโหลดพิกัดออฟฟิศ...</span>`;
+      try {
+        const response = await fetch(WEB_APP_URL + "?type=location");
+        const settings = await response.json();
+        
+        OFFICE_LAT = settings.lat;
+        OFFICE_LNG = settings.lng;
+        MAX_DISTANCE = settings.distance;
+        
+        getLocation();
+      } catch (error) {
+        document.getElementById("status").innerHTML = `<span style="color: red;">❌ โหลดพิกัดล้มเหลว</span>`;
+      }
+    }
+
+    // 📡 4. ตรวจสอบพิกัด GPS มือถือ
+    function getLocation() {
+      document.getElementById("status").innerHTML = `<span class="loading">กำลังตรวจสอบตำแหน่งของคุณ...</span>`;
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(checkDistance, () => {
+          document.getElementById("status").innerHTML = `<span style="color: red;">❌ ดึงพิกัดไม่สำเร็จ โปรดเปิด GPS</span>`;
+        }, { enableHighAccuracy: true, timeout: 15000 });
+      }
+    }
+
+    // 📏 5. คำนวณระยะห่าง
+    function checkDistance(position) {
+      currentLat = position.coords.latitude;
+      currentLng = position.coords.longitude;
+      currentDist = calculateDistance(currentLat, currentLng, OFFICE_LAT, OFFICE_LNG);
+      
+      const statusDiv = document.getElementById("status");
+      if (currentDist <= MAX_DISTANCE) {
+        statusDiv.innerHTML = `<span style="color: #28a745; font-weight:bold;">✅ คุณอยู่ในพื้นที่ออฟฟิศ (${currentDist} เมตร)</span>`;
+        // แสดงปุ่มสแกนเข้า
+        document.getElementById("btn-in").style.display = "flex"; 
+      } else {
+        statusDiv.innerHTML = `<span style="color: #dc3545; font-weight:bold;">❌ อยู่นอกพื้นที่ (${currentDist}/${MAX_DISTANCE} เมตร)</span>`;
+      }
+    }
+
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371e3; 
+      const p1 = lat1 * Math.PI / 180, p2 = lat2 * Math.PI / 180;
+      const dp = (lat2 - lat1) * Math.PI / 180, dl = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+      return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))); 
+    }
+
+    // 💾 6. บันทึกข้อมูล
+    async function recordTime(statusText) {
+      document.getElementById("btn-in").style.display = "none";
+      document.getElementById("status").innerHTML = `<span class="loading">⏳ กำลังบันทึกข้อมูล...</span>`;
+
+      const payload = {
+        userId: userProfile.userId, 
+        displayName: userProfile.displayName,
+        status: statusText,
+        lat: currentLat,
+        lng: currentLng,
+        distance: currentDist
+      };
+
+      try {
+        const response = await fetch(WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        
+        const result = await response.json();
+        if (result.status === "success") {
+          alert(`บันทึกข้อมูลสำเร็จ`);
+          liff.closeWindow(); 
+        } else {
+          throw new Error(result.message);
+        }
+      } catch (error) {
+        document.getElementById("status").innerHTML = `<span style="color: red;">❌ เกิดข้อผิดพลาดในการบันทึก</span>`;
+        document.getElementById("btn-in").style.display = "flex"; 
+      }
+    }
+
+    window.onload = main;
+  </script>
+</body>
+</html>
