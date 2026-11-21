@@ -3,62 +3,168 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <!-- ป้องกันแคช -->
+
+  <!-- ป้องกันการจำ Cache ของเบราว์เซอร์ LINE -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  
+
   <title>ระบบสแกนเข้างาน</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700&display=swap" rel="stylesheet">
+
   <style>
-    body { font-family: 'Kanit', sans-serif; text-align: center; padding: 20px; background-color: #f4f6f9; }
-    h2 { color: #333; }
-    .box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-    
-    /* รูปแบบปุ่มวงกลมสีเขียว (จัดกึ่งกลางด้วย Flexbox) */
-    .btn-in-circle { 
-      width: 240px; 
-      height: 240px; 
-      background-color: #28a745; /* เปลี่ยนเป็นสีเขียว */
-      border-radius: 50%; 
-      border: none; 
-      color: white; 
-      font-size: 32px; 
-      font-weight: bold; 
-      cursor: pointer; 
-      margin: 30px auto; 
-      box-shadow: 0 8px 20px rgba(40, 167, 69, 0.5); /* เปลี่ยนเงาเป็นโทนสีเขียว */
-      
-      /* ซ่อนไว้ก่อน จะแสดงเป็น flex เมื่ออยู่ในพื้นที่ */
-      display: none; 
+    body {
+      font-family: 'Kanit', sans-serif;
+      text-align: center;
+      padding: 20px;
+      background-color: #f4f6f9;
+      margin: 0;
+    }
+    h2 {
+      color: #333;
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+    .box {
+      background: white;
+      padding: 25px 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      max-width: 380px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #profile-info {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      color: #222;
+    }
+    #status {
+      font-size: 16px;
+      margin: 10px 0 20px 0;
+    }
+    .loading {
+      color: #f39c12;
+      font-weight: bold;
+    }
+
+    /* กล่องรวมปุ่มทั้งหมด (ซ่อนไว้ก่อน แสดงเมื่ออยู่ในระยะ GPS) */
+    #btn-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
+    /* ปุ่มหลัก: สแกนเข้างาน (สีเขียว ลดขนาดลง 25% จาก 240px เหลือ 180px) */
+    .btn-in-circle {
+      width: 180px;
+      height: 180px;
+      background-color: #28a745;
+      border-radius: 50%;
+      border: none;
+      color: white;
+      font-family: 'Kanit', sans-serif;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 10px auto 24px auto;
+      box-shadow: 0 8px 20px rgba(40, 167, 69, 0.45);
+      display: flex;
       justify-content: center;
       align-items: center;
+      text-align: center;
       padding: 0;
+      transition: transform 0.1s, box-shadow 0.1s;
     }
-    
-    #status { font-size: 16px; margin: 15px 0; }
-    .loading { color: #f39c12; font-weight: bold; }
+    .btn-in-circle:active {
+      transform: scale(0.95);
+      box-shadow: 0 2px 6px rgba(40, 167, 69, 0.4);
+    }
+
+    /* แถวปุ่มรอง 2 วงด้านล่าง */
+    .sub-btn-row {
+      display: flex;
+      justify-content: center;
+      gap: 28px;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    /* สไตล์ร่วมของปุ่มวงกลมรอง */
+    .btn-sub-circle {
+      width: 115px;
+      height: 115px;
+      border-radius: 50%;
+      border: none;
+      color: white;
+      font-family: 'Kanit', sans-serif;
+      font-size: 18px;
+      font-weight: bold;
+      line-height: 1.25;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 0;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .btn-sub-circle:active {
+      transform: scale(0.94);
+    }
+
+    /* ปุ่มซ้าย: ทีมขนส่ง (สีฟ้า) */
+    .btn-transport {
+      background-color: #3b82f6;
+      box-shadow: 0 6px 15px rgba(59, 130, 246, 0.4);
+    }
+
+    /* ปุ่มขวา: ทีม Mock up (สีส้ม) */
+    .btn-mockup {
+      background-color: #f59e0b;
+      box-shadow: 0 6px 15px rgba(245, 158, 11, 0.4);
+    }
   </style>
 </head>
 <body>
-  <h2>ระบบสแกนเข้างาน</h2>
-  
+
   <div class="box">
-    <div id="profile-info" style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">กำลังโหลดข้อมูล...</div>
+    <h2>ระบบสแกนเข้างาน</h2>
+    <div id="profile-info">กำลังโหลดข้อมูล...</div>
     <div id="status" class="loading">กำลังเตรียมความพร้อม...</div>
-    
-    <!-- ปุ่มสแกนเข้า -->
-    <button id="btn-in" class="btn-in-circle" onclick="recordTime('สแกนเข้า')">สแกนเข้างาน</button>
+
+    <!-- กลุ่มปุ่มกด (จะแสดงเมื่ออยู่ในระยะออฟฟิศเท่านั้น) -->
+    <div id="btn-container">
+      <!-- ปุ่มหลัก -->
+      <button id="btn-in" class="btn-in-circle" onclick="recordTime('สแกนเข้า')">
+        สแกนเข้างาน
+      </button>
+
+      <!-- ปุ่มรอง 2 วงคู่กัน -->
+      <div class="sub-btn-row">
+        <button id="btn-transport" class="btn-sub-circle btn-transport" onclick="recordTime('สแกนเข้า (ทีมขนส่ง)')">
+          ทีม<br>ขนส่ง
+        </button>
+        <button id="btn-mockup" class="btn-sub-circle btn-mockup" onclick="recordTime('สแกนเข้า (ทีม Mock up)')">
+          ทีม<br>Mock up
+        </button>
+      </div>
+    </div>
   </div>
 
   <script>
-    // ⚙️ 1. ใส่ค่าของคุณตรงนี้ให้ถูกต้อง
-    const LIFF_ID = "2012358032-O25dyx4P"; 
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzM9UpxEvIkHO928aBH2LES7ZocbV5RKL3fLD9u_GxcIzrg5RGLvjwoVM0VJfQuE1GgJQ/exec"; 
+    // ==========================================
+    // ⚙️ 1. ตั้งค่า LIFF และ Web App URL
+    // ==========================================
+    const LIFF_ID = "2012358032-O25dyx4P";
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzM9UpxEvIkHO928aBH2LES7ZocbV5RKL3fLD9u_GxcIzrg5RGLvjwoVM0VJfQuE1GgJQ/exec";
 
-    // ตัวแปรเก็บพิกัด
     let OFFICE_LAT = 0, OFFICE_LNG = 0, MAX_DISTANCE = 0;
     let userProfile = null, currentLat = null, currentLng = null, currentDist = null;
 
@@ -66,8 +172,10 @@
     async function main() {
       try {
         await liff.init({ liffId: LIFF_ID });
-        if (!liff.isLoggedIn()) { liff.login(); return; }
-        
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
         userProfile = await liff.getProfile();
         document.getElementById("profile-info").innerText = "👤 สวัสดีคุณ: " + userProfile.displayName;
         loadSettings();
@@ -82,11 +190,11 @@
       try {
         const response = await fetch(WEB_APP_URL + "?type=location");
         const settings = await response.json();
-        
+
         OFFICE_LAT = settings.lat;
         OFFICE_LNG = settings.lng;
         MAX_DISTANCE = settings.distance;
-        
+
         getLocation();
       } catch (error) {
         document.getElementById("status").innerHTML = `<span style="color: red;">❌ โหลดพิกัดล้มเหลว</span>`;
@@ -97,9 +205,13 @@
     function getLocation() {
       document.getElementById("status").innerHTML = `<span class="loading">กำลังตรวจสอบตำแหน่งของคุณ...</span>`;
       if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(checkDistance, () => {
-          document.getElementById("status").innerHTML = `<span style="color: red;">❌ ดึงพิกัดไม่สำเร็จ โปรดเปิด GPS</span>`;
-        }, { enableHighAccuracy: true, timeout: 15000 });
+        navigator.geolocation.getCurrentPosition(checkDistance, showError, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        });
+      } else {
+        document.getElementById("status").innerHTML = `<span style="color: red;">❌ อุปกรณ์ไม่รองรับ GPS</span>`;
       }
     }
 
@@ -108,32 +220,33 @@
       currentLat = position.coords.latitude;
       currentLng = position.coords.longitude;
       currentDist = calculateDistance(currentLat, currentLng, OFFICE_LAT, OFFICE_LNG);
-      
+
       const statusDiv = document.getElementById("status");
       if (currentDist <= MAX_DISTANCE) {
         statusDiv.innerHTML = `<span style="color: #28a745; font-weight:bold;">✅ คุณอยู่ในพื้นที่ออฟฟิศ (${currentDist} เมตร)</span>`;
-        // แสดงปุ่มสแกนเข้า
-        document.getElementById("btn-in").style.display = "flex"; 
+        document.getElementById("btn-container").style.display = "flex";
       } else {
         statusDiv.innerHTML = `<span style="color: #dc3545; font-weight:bold;">❌ อยู่นอกพื้นที่ (${currentDist}/${MAX_DISTANCE} เมตร)</span>`;
+        document.getElementById("btn-container").style.display = "none";
       }
     }
 
     function calculateDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371e3; 
+      const R = 6371e3;
       const p1 = lat1 * Math.PI / 180, p2 = lat2 * Math.PI / 180;
       const dp = (lat2 - lat1) * Math.PI / 180, dl = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
-      return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))); 
+      const a = Math.sin(dp / 2) * Math.sin(dp / 2) +
+                Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+      return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
     }
 
     // 💾 6. บันทึกข้อมูล
     async function recordTime(statusText) {
-      document.getElementById("btn-in").style.display = "none";
-      document.getElementById("status").innerHTML = `<span class="loading">⏳ กำลังบันทึกข้อมูล...</span>`;
+      document.getElementById("btn-container").style.display = "none";
+      document.getElementById("status").innerHTML = `<span class="loading">⏳ กำลังบันทึกข้อมูล (${statusText})...</span>`;
 
       const payload = {
-        userId: userProfile.userId, 
+        userId: userProfile.userId,
         displayName: userProfile.displayName,
         status: statusText,
         lat: currentLat,
@@ -147,18 +260,26 @@
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
         });
-        
         const result = await response.json();
+
         if (result.status === "success") {
-          alert(`บันทึกข้อมูลสำเร็จ`);
-          liff.closeWindow(); 
+          alert(`บันทึกข้อมูลสำเร็จ: ${statusText}`);
+          liff.closeWindow();
         } else {
-          throw new Error(result.message);
+          throw new Error(result.message || "บันทึกล้มเหลว");
         }
       } catch (error) {
         document.getElementById("status").innerHTML = `<span style="color: red;">❌ เกิดข้อผิดพลาดในการบันทึก</span>`;
-        document.getElementById("btn-in").style.display = "flex"; 
+        document.getElementById("btn-container").style.display = "flex";
       }
+    }
+
+    function showError(error) {
+      let msg = "❌ ดึงพิกัดไม่สำเร็จ โปรดเปิด GPS";
+      if (error.code === error.PERMISSION_DENIED) msg = "❌ คุณไม่ได้อนุญาตให้เข้าถึง GPS";
+      if (error.code === error.POSITION_UNAVAILABLE) msg = "❌ ไม่สามารถค้นหาพิกัดตำแหน่งของคุณได้";
+      if (error.code === error.TIMEOUT) msg = "❌ หมดเวลาในการค้นหาตำแหน่ง";
+      document.getElementById("status").innerHTML = `<span style="color: red; font-weight:bold;">${msg}</span>`;
     }
 
     window.onload = main;
